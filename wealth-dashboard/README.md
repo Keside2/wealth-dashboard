@@ -1,16 +1,39 @@
-# React + Vite
+# 💰 Wealth Dashboard & Portfolio Tracker
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A high-end FinTech application designed to track assets, visualize spending, and monitor real-time market prices.
 
-Currently, two official plugins are available:
+## 🚀 The Vision
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+To create a "Sleek & Smart" financial tool that moves away from boring spreadsheets and into interactive, data-driven storytelling.
 
-## React Compiler
+## 🛠️ Tech Stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **Frontend:** React.js + Tailwind CSS
+- **Backend:** Firebase (Firestore & Auth)
+- **Data Viz:** Recharts (Interactive Line & Pie Charts)
+- **APIs:** CoinGecko / Alpha Vantage (Real-time Prices)
 
-## Expanding the ESLint configuration
+## 🗺️ 3-Week Implementation Roadmap
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+### Week 1: Foundation & Auth (Current)
+
+- [ ] Project Setup & Tailwind Configuration
+- [ ] Firebase Authentication (Google & Email)
+- [ ] Dashboard Layout Design (Glassmorphism Sidebar)
+- [ ] Firestore Transaction Schema
+
+### Week 2: Data & Logic
+
+- [ ] Financial API Integration (Live Market Prices)
+- [ ] Portfolio Calculation Engine (Net Worth Logic)
+- [ ] Asset Addition & Filtering
+
+### Week 3: Visualization & Polish
+
+- [ ] Interactive Charts (Wealth growth over time)
+- [ ] Responsive Design & Performance Optimization
+- [ ] Framer Motion Micro-interactions
+
+---
+
+_Built during Day 6-27 of my #100DaysOfCode challenge._
