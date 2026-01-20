@@ -1,5 +1,5 @@
 import { db } from './firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, deleteDoc } from 'firebase/firestore';
 
 export const addTransaction = async (userId, data) => {
     try {
@@ -13,5 +13,15 @@ export const addTransaction = async (userId, data) => {
         });
     } catch (error) {
         console.error("Error adding transaction: ", error);
+    }
+};
+
+export const deleteTransaction = async (transactionId) => {
+    try {
+        const transactionRef = doc(db, 'transactions', transactionId);
+        await deleteDoc(transactionRef);
+    } catch (error) {
+        console.error("Error deleting transaction: ", error);
+        throw error;
     }
 };
