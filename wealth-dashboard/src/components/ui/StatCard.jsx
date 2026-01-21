@@ -1,8 +1,8 @@
 import { TrendingUp, TrendingDown } from 'lucide-react';
 
-export default function StatCard({ title, amount, change, isPositive, icon: Icon, color }) {
+export default function StatCard({ title, amount, change, isPositive, icon: Icon, color, className }) {
   return (
-    <div className="relative overflow-hidden rounded-3xl bg-white/5 border border-white/10 p-6 backdrop-blur-md">
+    <div className={`bg-white/5 p-6 rounded-[2.5rem] border border-white/10 backdrop-blur-xl relative overflow-hidden transition-all ${className}`}>
       {/* Decorative Glow */}
       <div className={`absolute -top-10 -right-10 w-24 h-24 blur-[80px] rounded-full ${color}`}></div>
       

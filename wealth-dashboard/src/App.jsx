@@ -2,7 +2,7 @@ import { useAuth } from './context/AuthContext';
 import Sidebar from './components/layout/Sidebar';
 import StatCard from './components/ui/StatCard';
 import { CreditCard, Wallet, TrendingUp, Menu, X, Plus, RotateCcw, Search } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react'; // Added useMemo for performance
 import { addTransaction } from './lib/transactions';
 import TransactionList from './components/dashboard/TransactionList';
 import Login from './pages/Login';
@@ -12,28 +12,35 @@ import FinancialChart from './components/dashboard/FinancialChart';
 import BudgetProgress from './components/dashboard/BudgetProgress';
 
 /**
- * WEALTHIFY APP - DAY 9 COMMIT
- * Features: Smart Categories, Crypto-style Trends, Search, and Mobile Responsive Menu.
+ * WEALTHIFY APP - DAY 10 COMMIT
+ * Features: Unique X-Axis Charting, Custom Delete Modals, 
+ * Empty State Illustrations, and Balance Heartbeat Pulse.
  */
 function App() {
   const { user } = useAuth();
+  
+  // 1. STATE MANAGEMENT
   const [title, setTitle] = useState('');
   const [amount, setAmount] = useState('');
   const [type, setType] = useState('income');
   const [chartFilter, setChartFilter] = useState('all'); 
-  
   const [category, setCategory] = useState('General'); 
   const [isCustomCategory, setIsCustomCategory] = useState(false);
   const [customCategory, setCustomCategory] = useState('');
-  
   const [transactions, setTransactions] = useState([]);
   const [searchTerm, setSearchTerm] = useState(''); 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [pulseTrigger, setPulseTrigger] = useState(false);
+  const [pulses, setPulses] = useState({
+  balance: false,
+  income: false,
+  expense: false
+});
 
-  // 1. REAL-TIME DATA FETCHING
+  // 2. REAL-TIME DATA FETCHING
   useEffect(() => {
-    if (!user) return;
-    // Added orderBy to ensure chronological order for the Trend Chart
+    if (!user?.uid) return;
+
     const q = query(
       collection(db, 'transactions'), 
       where('userId', '==', user.uid),
@@ -41,35 +48,53 @@ function App() {
     );
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      setTransactions(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      const data = snapshot.docs.map(doc => ({ 
+        id: doc.id, 
+        ...doc.data() 
+      }));
+      setTransactions(data);
+    }, (error) => {
+      console.error("Firestore Error:", error);
     });
-    return () => unsubscribe();
-  }, [user]);
 
-  // 2. DYNAMIC CATEGORY ENGINE
+    return () => unsubscribe();
+  }, [user?.uid]); 
+
+  // 3. FINANCIAL CALCULATIONS (Moved Up)
+  const totalIncome = transactions.filter(t => t.type === 'income').reduce((acc, curr) => acc + Number(curr.amount || 0), 0);
+  const totalExpense = transactions.filter(t => t.type === 'expense').reduce((acc, curr) => acc + Number(curr.amount || 0), 0);
+  const balance = totalIncome - totalExpense;
+
+  // 4. PULSE EFFECT (Now balance is defined!)
+  useEffect(() => {
+  if (transactions.length === 0) return;
+
+}, [transactions.length]);
+
+  // 5. DYNAMIC CATEGORY ENGINE
   const savedCategories = [...new Set(transactions.map(t => t.category))];
   const allCategories = [...new Set(['General', 'Food', 'Transport', 'Rent', 'Tech', 'Salary', ...savedCategories])];
 
-  // 3. FINANCIAL CALCULATIONS
-  const totalIncome = transactions.filter(t => t.type === 'income').reduce((acc, curr) => acc + Number(curr.amount), 0);
-  const totalExpense = transactions.filter(t => t.type === 'expense').reduce((acc, curr) => acc + Number(curr.amount), 0);
-  const balance = totalIncome - totalExpense;
+  // 6. CHART DATA GENERATION (Optimized)
+  const filteredChartData = useMemo(() => {
+    let runningBalance = 0;
+    const points = transactions.map((t, index) => {
+      const amt = Number(t.amount || 0);
+      t.type === 'income' ? (runningBalance += amt) : (runningBalance -= amt);
 
-  // 4. CRYPTO-STYLE TREND ENGINE (Cumulative P&L)
-  const filteredChartData = transactions
-    .reduce((acc, t) => {
-      const lastBalance = acc.length > 0 ? acc[acc.length - 1].amount : 0;
-      const amt = Number(t.amount);
-      const newBalance = t.type === 'income' ? lastBalance + amt : lastBalance - amt;
-      
-      acc.push({
-        date: t.createdAt?.toDate().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) || '',
-        amount: chartFilter === 'all' ? newBalance : amt, 
-        type: t.type
-      });
-      return acc;
-    }, [])
-    .filter(t => chartFilter === 'all' ? true : t.type === chartFilter);
+      return {
+        id: t.id,
+        x: t.createdAt?.toMillis() ?? index,
+        dateLabel: t.createdAt?.toDate().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) || 'Pending',
+        amount: chartFilter === 'all' ? runningBalance : amt,
+        type: t.type,
+        title: t.title,
+        rawAmount: amt
+      };
+    });
+
+    return chartFilter === 'all' ? points : points.filter(p => p.type === chartFilter);
+  }, [transactions, chartFilter]);
 
   const getChartColor = () => {
     if (chartFilter === 'expense') return '#f43f5e';
@@ -77,13 +102,26 @@ function App() {
     return balance >= 0 ? '#10b981' : '#f43f5e';
   };
 
-  // 5. ACTION HANDLERS
+  // 7. ACTION HANDLERS
   const handleAdd = async (e) => {
     e.preventDefault();
     if (!title || !amount || amount <= 0) return;
-    
     const finalCategory = isCustomCategory ? customCategory : category;
     
+
+    // 🚀 TRIGGER PULSE INSTANTLY
+  setPulses({
+    balance: true,
+    income: type === 'income',
+    expense: type === 'expense'
+  });
+
+  // Reset the pulse after the animation duration
+  setTimeout(() => {
+    setPulses({ balance: false, income: false, expense: false });
+  }, 800);
+
+
     try {
       await addTransaction(user.uid, { 
         title, 
@@ -91,7 +129,6 @@ function App() {
         type, 
         category: finalCategory 
       });
-      // Reset State
       setTitle(''); setAmount(''); setCustomCategory(''); setIsCustomCategory(false);
     } catch (err) {
       console.error("Failed to add transaction:", err);
@@ -113,12 +150,11 @@ function App() {
         <Sidebar onNavClick={() => setIsMobileMenuOpen(false)} />
       </div>
 
-      {/* SCROLLABLE DASHBOARD AREA */}
       <main className="flex-1 h-full overflow-y-auto p-6 lg:p-12 custom-scrollbar">
         <header className="mb-10 pt-12 lg:pt-0 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
             <h1 className="text-3xl lg:text-5xl font-bold italic tracking-tighter">Wealthify.</h1>
-            <p className="text-slate-500 mt-2 font-medium">Monitoring your financial pulse, {user.displayName.split(' ')[0]}.</p>
+            <p className="text-slate-500 mt-2 font-medium">Monitoring your financial pulse, {user.displayName?.split(' ')[0]}.</p>
           </div>
           
           <div className="relative group">
@@ -134,15 +170,32 @@ function App() {
         </header>
 
         {/* TOP STATS ROW */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-          <StatCard title="Total Balance" amount={`${balance.toLocaleString()}`} icon={Wallet} color="text-blue-500" />
-          <StatCard title="Total Income" amount={`${totalIncome.toLocaleString()}`} icon={TrendingUp} color="text-emerald-500" />
-          <StatCard title="Total Expenses" amount={`${totalExpense.toLocaleString()}`} icon={CreditCard} color="text-rose-500" />
-        </div>
+        {/* TOP STATS ROW */}
+<div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+  <StatCard 
+    title="Total Balance" 
+    amount={`${balance.toLocaleString()}`} 
+    icon={Wallet} 
+    color="text-blue-500" 
+    className={pulses.balance ? 'balance-pulse' : ''} 
+  />
+  <StatCard 
+    title="Total Income" 
+    amount={`${totalIncome.toLocaleString()}`} 
+    icon={TrendingUp} 
+    color="text-emerald-500" 
+    className={pulses.income ? 'income-pulse' : ''} 
+  />
+  <StatCard 
+    title="Total Expenses" 
+    amount={`${totalExpense.toLocaleString()}`} 
+    icon={CreditCard} 
+    color="text-rose-500" 
+    className={pulses.expense ? 'expense-pulse' : ''} 
+  />
+</div>
 
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-          
-          {/* LEFT SIDE: Management Tools */}
           <div className="xl:col-span-1 space-y-6">
             <div className="bg-white/5 p-6 rounded-[2.5rem] border border-white/10 backdrop-blur-xl relative overflow-hidden group">
               <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600/5 blur-[50px] rounded-full" />
@@ -155,7 +208,7 @@ function App() {
                     </button>
                   ))}
                 </div>
-                <input type="text" placeholder="Title (e.g. Freelance)" value={title} onChange={(e) => setTitle(e.target.value)} className="w-full bg-black/20 border border-white/10 p-3.5 rounded-xl mb-3 outline-none focus:border-white/20 transition-all" />
+                <input type="text" placeholder="Title (e.g. Rent)" value={title} onChange={(e) => setTitle(e.target.value)} className="w-full bg-black/20 border border-white/10 p-3.5 rounded-xl mb-3 outline-none focus:border-white/20 transition-all" />
                 <input type="number" placeholder="Amount" value={amount} onChange={(e) => setAmount(e.target.value)} className="w-full bg-black/20 border border-white/10 p-3.5 rounded-xl mb-3 outline-none focus:border-white/20 transition-all" />
                 
                 <div className="mb-5">
@@ -176,11 +229,9 @@ function App() {
                 <button className="w-full bg-blue-600 hover:bg-blue-500 py-4 rounded-xl font-bold shadow-lg shadow-blue-600/20 active:scale-[0.98] transition-all">Add Transaction</button>
               </form>
             </div>
-            
             <BudgetProgress income={totalIncome} expenses={totalExpense} />
           </div>
 
-          {/* RIGHT SIDE: Visual Analytics */}
           <div className="xl:col-span-2 space-y-8 pb-10">
             <div className="bg-white/5 border border-white/10 p-6 lg:p-8 rounded-[2.5rem] backdrop-blur-sm">
               <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-8 gap-4">
@@ -210,7 +261,6 @@ function App() {
                 )}
               </div>
             </div>
-            
             <TransactionList searchTerm={searchTerm} />
           </div>
         </div>
