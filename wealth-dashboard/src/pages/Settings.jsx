@@ -1,28 +1,52 @@
-import React, { useState, useEffect } from 'react';
-import { User, Palette, Globe, LogOut, Save, CheckCircle } from 'lucide-react';
+import React, { useState } from 'react';
+import { User, Palette, Globe, LogOut, CheckCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import './Settings.css';
+import { updateProfile } from 'firebase/auth';
+import { auth } from '../lib/firebase';
 
-export default function Settings({ currentCurrency, setCurrency }) {
+export default function Settings({ currentCurrency, setCurrency, currentTheme, setTheme }) {
     const { user, logout } = useAuth();
     const [name, setName] = useState(user?.displayName || '');
     const [showToast, setShowToast] = useState(false);
+    const [isUpdating, setIsUpdating] = useState(false);
+    const [toastMsg, setToastMsg] = useState('');
+
+    // NEW: State to track which sub-tab is active
+    const [activeSubTab, setActiveSubTab] = useState('profile');
 
     const handleCurrencyChange = (curr) => {
         setCurrency({ symbol: curr.symbol, label: curr.label });
+        setToastMsg(`Currency updated to ${curr.label}`);
+        triggerToast();
+    };
 
-        // Trigger the popup
+    const handleThemeChange = (newTheme) => {
+        setTheme(newTheme);
+        setToastMsg(`Theme set to ${newTheme.charAt(0).toUpperCase() + newTheme.slice(1)}`);
+        triggerToast();
+    };
+
+    const handleUpdateProfile = async (e) => {
+        e.preventDefault();
+        if (!name.trim()) return;
+        setIsUpdating(true);
+        try {
+            await updateProfile(auth.currentUser, { displayName: name });
+            setToastMsg('Profile updated successfully!');
+            triggerToast();
+        } catch (error) {
+            console.error("Error updating profile:", error);
+        } finally {
+            setIsUpdating(false);
+        }
+    };
+
+    const triggerToast = () => {
         setShowToast(true);
-
-        // Hide it after 3 seconds
         setTimeout(() => setShowToast(false), 3000);
     };
 
-    const currencies = [
-        { symbol: '$', label: 'USD' },
-        { symbol: '₦', label: 'NGN' },
-        { symbol: '€', label: 'EUR' }
-    ];
     return (
         <div className="settings-container">
             <header className="settings-header">
@@ -30,83 +54,136 @@ export default function Settings({ currentCurrency, setCurrency }) {
                 <p className="settings-subtitle">Personalize your Wealthify experience.</p>
             </header>
 
-            {/* THE POPUP (TOAST) */}
             <div className={`currency-toast ${showToast ? 'show' : ''}`}>
                 <CheckCircle size={18} />
-                <span>Currency updated to {currentCurrency?.label}</span>
+                <span>{toastMsg}</span>
             </div>
 
-
-
             <div className="settings-grid">
-                {/* SIDE TABS */}
+                {/* SIDE TABS - Now with onClick handlers */}
                 <div className="settings-tabs">
-                    <button className="tab-btn active">
+                    <button
+                        className={`tab-btn ${activeSubTab === 'profile' ? 'active' : ''}`}
+                        onClick={() => setActiveSubTab('profile')}
+                    >
                         <User size={20} /> Profile
                     </button>
-                    <button className="tab-btn">
+                    <button
+                        className={`tab-btn ${activeSubTab === 'appearance' ? 'active' : ''}`}
+                        onClick={() => setActiveSubTab('appearance')}
+                    >
                         <Palette size={20} /> Appearance
                     </button>
-                    <button className="tab-btn">
+                    <button
+                        className={`tab-btn ${activeSubTab === 'preferences' ? 'active' : ''}`}
+                        onClick={() => setActiveSubTab('preferences')}
+                    >
                         <Globe size={20} /> Preferences
                     </button>
                 </div>
 
-                {/* CONTENT AREA */}
+                {/* CONTENT AREA - Conditional Rendering based on activeSubTab */}
                 <div className="settings-content">
-                    <section className="settings-card">
-                        <h3 className="card-title">User Profile</h3>
 
-                        <div className="form-group">
-                            <div className="input-wrapper">
-                                <label className="input-label">Display Name</label>
-                                <input
-                                    type="text"
-                                    value={name}
-                                    onChange={(e) => setName(e.target.value)}
-                                    className="settings-input"
-                                    placeholder="Enter your name"
-                                />
+                    {activeSubTab === 'profile' && (
+                        <section className="settings-card animate-fade-in">
+                            <div className="card-header">
+                                <User size={20} className="text-blue-500" />
+                                <h3 className="card-title">User Profile</h3>
                             </div>
+                            <form onSubmit={handleUpdateProfile} className="profile-form">
+                                <div className="input-group">
+                                    <label className="input-label">Display Name</label>
+                                    <input
+                                        type="text"
+                                        className="settings-input"
+                                        value={name}
+                                        onChange={(e) => setName(e.target.value)}
+                                        placeholder="Enter your name"
+                                    />
+                                </div>
+                                <button
+                                    type="submit"
+                                    className="save-btn"
+                                    disabled={isUpdating || name === user?.displayName}
+                                >
+                                    {isUpdating ? 'Saving...' : 'Save Changes'}
+                                </button>
+                            </form>
+                        </section>
+                    )}
 
-                            <div className="input-wrapper">
-                                <label className="input-label">Email Address</label>
-                                <input
-                                    type="email"
-                                    value={user?.email}
-                                    disabled
-                                    className="settings-input disabled"
-                                />
+                    {activeSubTab === 'appearance' && (
+                        <section className="settings-card animate-fade-in">
+                            <div className="card-header">
+                                <Palette size={20} className="text-blue-500" />
+                                <h3 className="card-title">Appearance</h3>
                             </div>
+                            <div className="theme-grid">
+                                <button
+                                    className={`theme-btn midnight ${currentTheme === 'midnight' ? 'active' : ''}`}
+                                    onClick={() => handleThemeChange('midnight')}
+                                >
+                                    <div className="theme-preview midnight-preview"></div>
+                                    <span>Midnight Blue</span>
+                                </button>
+                                <button
+                                    className={`theme-btn stealth ${currentTheme === 'stealth' ? 'active' : ''}`}
+                                    onClick={() => handleThemeChange('stealth')}
+                                >
+                                    <div className="theme-preview stealth-preview"></div>
+                                    <span>Pure Stealth</span>
+                                </button>
 
-                            <button className="save-btn">
-                                <Save size={18} /> Save Changes
-                            </button>
-                        </div>
-                    </section>
+                                <button
+                                    className={`theme-btn rose ${currentTheme === 'rose' ? 'active' : ''}`}
+                                    onClick={() => handleThemeChange('rose')}
+                                >
+                                    <div className="theme-preview rose-preview"></div>
+                                    <span>Rose Gold</span>
+                                </button>
 
-                    <section className="settings-card">
-                        <h3 className="card-title">Regional Preferences</h3>
-                        <div className="preferences-group">
-                            <label className="input-label">Primary Currency</label>
-                            <div className="currency-grid">
-                                {[
-                                    { symbol: '$', label: 'USD' },
-                                    { symbol: '₦', label: 'NGN' },
-                                    { symbol: '€', label: 'EUR' }
-                                ].map((curr) => (
-                                    <button
-                                        key={curr.label}
-                                        className={`currency-btn ${currentCurrency?.label === curr.label ? 'active' : ''}`}
-                                        onClick={() => handleCurrencyChange(curr)} // NEW HANDLER
-                                    >
-                                        <span className="currency-symbol">{curr.symbol}</span>
-                                        <span className="currency-label">{curr.label}</span>
-                                    </button>
-                                ))}
+                                <button
+                                    className={`theme-btn emerald ${currentTheme === 'emerald' ? 'active' : ''}`}
+                                    onClick={() => handleThemeChange('emerald')}
+                                >
+                                    <div className="theme-preview emerald-preview"></div>
+                                    <span>Deep Emerald</span>
+                                </button>
                             </div>
-                        </div>
-                    </section>
+                        </section>
+                    )}
+
+                    {activeSubTab === 'preferences' && (
+                        <section className="settings-card animate-fade-in">
+                            <div className="card-header">
+                                <Globe size={20} className="text-blue-500" />
+                                <h3 className="card-title">Regional Preferences</h3>
+                            </div>
+                            <div className="preferences-group">
+                                <label className="input-label">Primary Currency</label>
+                                <div className="currency-grid">
+                                    {[
+                                        { symbol: '$', label: 'USD' },
+                                        { symbol: '₦', label: 'NGN' },
+                                        { symbol: '£', label: 'GBP' },
+                                        { symbol: '€', label: 'EUR' },
+                                        { symbol: '¥', label: 'JPY' },
+                                        { symbol: '₵', label: 'GHS' }
+                                    ].map((curr) => (
+                                        <button
+                                            key={curr.label}
+                                            className={`currency-btn ${currentCurrency?.label === curr.label ? 'active' : ''}`}
+                                            onClick={() => handleCurrencyChange(curr)}
+                                        >
+                                            <span className="currency-symbol">{curr.symbol}</span>
+                                            <span className="currency-label">{curr.label}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        </section>
+                    )}
 
                     <button onClick={logout} className="signout-btn">
                         <LogOut size={18} /> Sign Out of Wealthify

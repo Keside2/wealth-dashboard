@@ -32,6 +32,9 @@ function App() {
     expense: false
   });
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem('wealthify_theme') || 'midnight';
+  });
 
   // PERSISTENT CURRENCY STATE
   const [currency, setCurrency] = useState(() => {
@@ -43,6 +46,11 @@ function App() {
   useEffect(() => {
     localStorage.setItem('wealthify_currency', JSON.stringify(currency));
   }, [currency]);
+
+  useEffect(() => {
+    document.body.className = theme;
+    localStorage.setItem('wealthify_theme', theme);
+  }, [theme]);
 
   // 2. REAL-TIME DATA FETCHING
   useEffect(() => {
@@ -238,7 +246,12 @@ function App() {
             </div>
           </>
         ) : (
-          <Settings currentCurrency={currency} setCurrency={setCurrency} />
+          <Settings
+            currentCurrency={currency}
+            setCurrency={setCurrency}
+            currentTheme={theme}
+            setTheme={setTheme}
+          />
         )}
       </main>
     </div>

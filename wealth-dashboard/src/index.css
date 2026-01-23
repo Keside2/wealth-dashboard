@@ -149,8 +149,81 @@
 /* css for StatCard end here  */
 
 
+/* In your Global CSS or Settings.css */
+:root {
+  --bg-color: #050505; /* Default Midnight */
+  --accent-glow: rgba(59, 130, 246, 0.1);
+}
 
+/* Midnight (Default) */
+body.midnight {
+  --bg-color: #050505;
+  --accent-glow: rgba(59, 130, 246, 0.1);
+}
 
+/* Stealth */
+body.stealth {
+  --bg-color: #000000;
+  --accent-glow: rgba(255, 255, 255, 0.05);
+}
 
+/* Rose Gold Tint */
+body.rose {
+  --bg-color: #0a0506; /* Very deep reddish black */
+  --accent-glow: rgba(253, 164, 175, 0.08);
+}
 
+/* Emerald Tint */
+body.emerald {
+  --bg-color: #040806; /* Very deep greenish black */
+  --accent-glow: rgba(16, 185, 129, 0.08);
+}
+
+/* Update your main app background to use the variable */
+.flex.h-screen {
+  background-color: var(--bg-color);
+  transition: background-color 0.5s ease;
+}
+
+/* Theme Button Styles */
+.theme-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.theme-btn {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 1rem;
+    border-radius: 16px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
+}
+
+.theme-btn.active {
+    border-color: #3b82f6;
+    background: rgba(59, 130, 246, 0.1);
+}
+
+.theme-preview {
+    width: 100%;
+    height: 40px;
+    border-radius: 8px;
+}
+
+.midnight-preview { background: #050505; border: 1px solid #1e293b; }
+.stealth-preview { background: #000000; border: 1px solid #ffffff10; }
+.rose-preview{background: #0f0808; border: 1px solid #ffffff10; }
+.emerald-preview{background: #040a08; border: 1px solid #ffffff10; }
+
+/* Apply the background globally */
+body {
+  background-color: var(--bg-color);
+  transition: background-color 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
 
