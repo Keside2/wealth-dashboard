@@ -11,6 +11,7 @@ import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestor
 import FinancialChart from './components/dashboard/FinancialChart';
 import BudgetProgress from './components/dashboard/BudgetProgress';
 import Settings from './pages/Settings';
+import { doc, updateDoc } from 'firebase/firestore';
 
 function App() {
   const { user } = useAuth();
@@ -35,6 +36,33 @@ function App() {
   const [theme, setTheme] = useState(() => {
     return localStorage.getItem('wealthify_theme') || 'midnight';
   });
+
+  const [monthlyBudget, setMonthlyBudget] = useState(() => {
+    return localStorage.getItem('wealthify_budget') || 0;
+  });
+
+
+  // 2. FINANCIAL CALCULATIONS
+  const totalIncome = transactions.filter(t => t.type === 'income').reduce((acc, curr) => acc + Number(curr.amount || 0), 0);
+  const totalExpense = transactions.filter(t => t.type === 'expense').reduce((acc, curr) => acc + Number(curr.amount || 0), 0);
+  const balance = totalIncome - totalExpense;
+
+  const budgetPercent = monthlyBudget > 0 ? (totalExpense / monthlyBudget) * 100 : 0;
+
+  const handleSaveBudget = async (newBudget) => {
+    setMonthlyBudget(newBudget);
+    localStorage.setItem('wealthify_budget', newBudget);
+
+    if (user) {
+      try {
+        const userRef = doc(db, "users", user.uid);
+        await updateDoc(userRef, { monthlyBudget: Number(newBudget) });
+      } catch (err) {
+        console.error("Firebase budget sync failed:", err);
+      }
+    }
+  };
+
 
   // PERSISTENT CURRENCY STATE
   const [currency, setCurrency] = useState(() => {
@@ -80,10 +108,7 @@ function App() {
     return `${currency.symbol}${Number(value).toLocaleString()}`;
   };
 
-  // 3. FINANCIAL CALCULATIONS
-  const totalIncome = transactions.filter(t => t.type === 'income').reduce((acc, curr) => acc + Number(curr.amount || 0), 0);
-  const totalExpense = transactions.filter(t => t.type === 'expense').reduce((acc, curr) => acc + Number(curr.amount || 0), 0);
-  const balance = totalIncome - totalExpense;
+
 
   // 5. DYNAMIC CATEGORY ENGINE
   const savedCategories = [...new Set(transactions.map(t => t.category))];
@@ -117,6 +142,7 @@ function App() {
         rawAmount: amt
       };
     });
+
 
     return chartFilter === 'all' ? points : points.filter(p => p.type === chartFilter);
   }, [transactions, chartFilter]);
@@ -189,6 +215,19 @@ function App() {
               <StatCard title="Total Expenses" amount={formatCurrency(totalExpense)} icon={CreditCard} color="text-rose-500" className={pulses.expense ? 'expense-pulse' : ''} />
             </div>
 
+            <div className="budget-card">
+              <div className="flex justify-between">
+                <span>Monthly Budget</span>
+                <span>{budgetPercent.toFixed(0)}% Used</span>
+              </div>
+              <div className="budget-progress-container">
+                <div
+                  className={`budget-progress-bar ${budgetPercent > 90 ? 'danger' : budgetPercent > 70 ? 'warning' : ''}`}
+                  style={{ width: `${Math.min(budgetPercent, 100)}%` }}
+                ></div>
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
               <div className="xl:col-span-1 space-y-6">
                 <div className="bg-white/5 p-6 rounded-[2.5rem] border border-white/10 backdrop-blur-xl relative overflow-hidden group">
@@ -251,6 +290,8 @@ function App() {
             setCurrency={setCurrency}
             currentTheme={theme}
             setTheme={setTheme}
+            monthlyBudget={monthlyBudget}
+            handleSaveBudget={handleSaveBudget}
           />
         )}
       </main>

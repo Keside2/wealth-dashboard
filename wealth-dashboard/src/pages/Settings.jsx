@@ -5,7 +5,7 @@ import './Settings.css';
 import { updateProfile } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 
-export default function Settings({ currentCurrency, setCurrency, currentTheme, setTheme }) {
+export default function Settings({ currentCurrency, setCurrency, currentTheme, setTheme, handleSaveBudget, monthlyBudget }) {
     const { user, logout } = useAuth();
     const [name, setName] = useState(user?.displayName || '');
     const [showToast, setShowToast] = useState(false);
@@ -14,6 +14,15 @@ export default function Settings({ currentCurrency, setCurrency, currentTheme, s
 
     // NEW: State to track which sub-tab is active
     const [activeSubTab, setActiveSubTab] = useState('profile');
+
+
+    const [budgetValue, setBudgetValue] = useState(monthlyBudget);
+
+    const onBudgetSubmit = () => {
+        handleSaveBudget(budgetValue);
+        setToastMsg(`Budget set to ${currentCurrency.symbol}${budgetValue}`);
+        triggerToast();
+    };
 
     const handleCurrencyChange = (curr) => {
         setCurrency({ symbol: curr.symbol, label: curr.label });
@@ -180,6 +189,25 @@ export default function Settings({ currentCurrency, setCurrency, currentTheme, s
                                             <span className="currency-label">{curr.label}</span>
                                         </button>
                                     ))}
+                                </div>
+                            </div>
+                            <div className="preferences-group" style={{ marginTop: '2rem' }}>
+                                <label className="input-label">Monthly Spending Limit ({currentCurrency.symbol})</label>
+                                <div className="budget-input-wrapper" style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+                                    <input
+                                        type="number"
+                                        className="settings-input"
+                                        value={budgetValue}
+                                        onChange={(e) => setBudgetValue(e.target.value)}
+                                        placeholder="e.g. 2000"
+                                    />
+                                    <button
+                                        className="save-btn"
+                                        onClick={onBudgetSubmit}
+                                        style={{ margin: 0, width: 'auto', whiteSpace: 'nowrap' }}
+                                    >
+                                        Set Budget
+                                    </button>
                                 </div>
                             </div>
                         </section>
