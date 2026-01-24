@@ -227,3 +227,65 @@ body {
   transition: background-color 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* Container for the Budget Section */
+.budget-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 2rem;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    backdrop-filter: blur(10px);
+}
+
+/* Header text inside the budget card */
+.budget-card .flex {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.budget-card span:first-child {
+    color: #94a3b8; /* Slate-400 */
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.budget-card span:last-child {
+    font-family: 'Monaco', monospace;
+    font-weight: 700;
+    color: #ffffff;
+}
+
+/* The Progress Track (Background) */
+.budget-progress-container {
+    width: 100%;
+    height: 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 20px;
+    overflow: hidden;
+    position: relative;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* The Actual Progress Fill */
+.budget-progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #3b82f6, #2dd4bf); /* Blue to Teal gradient */
+    border-radius: 20px;
+    transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 0 15px rgba(59, 130, 246, 0.3);
+}
+
+/* Color States based on spending */
+.budget-progress-bar.warning {
+    background: linear-gradient(90deg, #f59e0b, #fbbf24); /* Orange/Gold */
+    box-shadow: 0 0 15px rgba(245, 158, 11, 0.3);
+}
+
+.budget-progress-bar.danger {
+    background: linear-gradient(90deg, #ef4444, #f43f5e); /* Red/Rose */
+    box-shadow: 0 0 15px rgba(239, 68, 68, 0.4);
+}
