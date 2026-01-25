@@ -289,3 +289,160 @@ body {
     background: linear-gradient(90deg, #ef4444, #f43f5e); /* Red/Rose */
     box-shadow: 0 0 15px rgba(239, 68, 68, 0.4);
 }
+
+
+/* css for Goal start here  */
+
+.goal-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1rem;
+}
+
+.goal-card {
+    background: rgba(255, 255, 255, 0.03);
+    padding: 1.5rem;
+    border-radius: 1.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.goal-icon {
+    width: 40px;
+    height: 40px;
+    background: rgba(59, 130, 246, 0.1);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1rem;
+    color: #3b82f6;
+}
+
+/* css for Goal end here */
+
+
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(12px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
+
+.modal-content {
+    .goal-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1rem;
+}
+}
+
+.goal-card {
+    position: relative; /* Crucial for absolute positioning of icons */
+    overflow: hidden;
+}
+@media (max-width: 640px) {
+  .goal-card {
+    position: relative; /* Crucial for absolute positioning of icons */
+    overflow: hidden;
+    margin-right: 10px;
+}
+}
+
+.goal-card .opacity-0 {
+    transition: opacity 0.2s ease-in-out;
+}
+
+.goal-card:hover .opacity-0 {
+    opacity: 1;
+}
+
+
+/* This ensures that in the wide column, cards form a 2-column grid */
+.xl\:col-span-2 .goal-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.5rem;
+}
+
+
+
+.toast-notification {
+    position: fixed;
+    bottom: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(15, 23, 42, 0.8); /* Slate 900 with opacity */
+    backdrop-filter: blur(12px);
+    color: white;
+    padding: 16px 28px;
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+    z-index: 10001;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-weight: 500;
+    pointer-events: none; /* User can click through it */
+}
+
+/* Success Glow */
+.toast-notification.success {
+    border-bottom: 2px solid #10b981;
+}
+
+/* Error/Delete Glow */
+.toast-notification.error {
+    border-bottom: 2px solid #f43f5e;
+}
+
+
+/* Add this to your Plain CSS */
+
+@media (max-width: 480px) {
+    /* 1. Adjust the main card container */
+    .RecentTransactions-card {
+        padding: 1rem !important;
+    }
+
+    /* 2. Change the transaction row to allow wrapping */
+    .transaction-item {
+        display: flex;
+        flex-direction: column; /* Stack vertically on mobile */
+        gap: 0.75rem;
+        position: relative;
+    }
+
+    /* 3. Keep icon and title on the same line */
+    .transaction-info-group {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        width: 100%;
+    }
+
+    /* 4. Put amount and delete button on a second line */
+    .transaction-meta-group {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-top: 0.5rem;
+        border-top: 1px solid rgba(255, 255, 255, 0.05);
+        width: 100%;
+    }
+
+    /* 5. Make the title bold and readable */
+    .transaction-title {
+        font-size: 0.95rem;
+        max-width: 150px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+}

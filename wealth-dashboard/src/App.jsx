@@ -1,17 +1,20 @@
 import { useAuth } from './context/AuthContext';
 import Sidebar from './components/layout/Sidebar';
 import StatCard from './components/ui/StatCard';
-import { CreditCard, Wallet, TrendingUp, Menu, X, Plus, RotateCcw, Search } from 'lucide-react';
+import { CreditCard, Wallet, TrendingUp, Menu, X, Plus, RotateCcw, Search, Trash2 } from 'lucide-react';
 import { useState, useEffect, useMemo } from 'react';
 import { addTransaction } from './lib/transactions';
 import TransactionList from './components/dashboard/TransactionList';
 import Login from './pages/Login';
 import { db } from './lib/firebase';
-import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, orderBy, addDoc, deleteDoc } from 'firebase/firestore';
 import FinancialChart from './components/dashboard/FinancialChart';
 import BudgetProgress from './components/dashboard/BudgetProgress';
 import Settings from './pages/Settings';
 import { doc, updateDoc } from 'firebase/firestore';
+import Goals from './components/dashboard/Goals';
+
+
 
 function App() {
   const { user } = useAuth();
@@ -41,6 +44,23 @@ function App() {
     return localStorage.getItem('wealthify_budget') || 0;
   });
 
+  const [goalTitle, setGoalTitle] = useState('');
+  const [goalTarget, setGoalTarget] = useState('');
+  const [goals, setGoals] = useState([]);
+  const [editingGoal, setEditingGoal] = useState(null);
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+  const [goalToDelete, setGoalToDelete] = useState(null);
+
+  // Function to trigger the toast
+  const showToast = (message, type = 'success') => {
+    setToast({ show: true, message, type });
+    setTimeout(() => setToast({ ...toast, show: false }), 3000); // Hide after 3 seconds
+  };
+
+  // Logic to determine layout
+
+  const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
+
 
   // 2. FINANCIAL CALCULATIONS
   const totalIncome = transactions.filter(t => t.type === 'income').reduce((acc, curr) => acc + Number(curr.amount || 0), 0);
@@ -48,6 +68,69 @@ function App() {
   const balance = totalIncome - totalExpense;
 
   const budgetPercent = monthlyBudget > 0 ? (totalExpense / monthlyBudget) * 100 : 0;
+
+  // handle Goal Submit 
+
+  const handleGoalSubmit = async (e) => {
+    e.preventDefault();
+    if (!goalTitle || !goalTarget) return;
+
+    try {
+      if (editingGoal) {
+        // UPDATE existing goal
+        const goalRef = doc(db, 'goals', editingGoal.id);
+        await updateDoc(goalRef, {
+          title: goalTitle,
+          targetAmount: Number(goalTarget),
+        });
+        showToast("Goal updated successfully! ✨"); // Call it AFTER the await
+      } else {
+        // CREATE new goal
+        await addDoc(collection(db, 'goals'), {
+          userId: user.uid,
+          title: goalTitle,
+          targetAmount: Number(goalTarget),
+          currentSaved: 0,
+          createdAt: new Date()
+        });
+        showToast("New goal created! 🎯"); // Show success for new goals too
+      }
+
+      setGoalTitle('');
+      setGoalTarget('');
+      setEditingGoal(null);
+      setIsGoalModalOpen(false);
+    } catch (err) {
+      console.error("Goal save failed:", err);
+      showToast("Failed to save goal ❌", "error");
+    }
+  };
+
+  // This just opens the modal
+  const confirmDelete = (goalId) => {
+    setGoalToDelete(goalId);
+  };
+
+  // This actually talks to Firebase
+  const executeDelete = async () => {
+    if (!goalToDelete) return;
+
+    try {
+      await deleteDoc(doc(db, 'goals', goalToDelete));
+      showToast("Goal removed forever 🗑️", "error");
+      setGoalToDelete(null); // Close modal
+    } catch (err) {
+      console.error("Delete failed:", err);
+      showToast("Error deleting goal", "error");
+    }
+  };
+
+  const handleEditGoal = (goal) => {
+    setEditingGoal(goal);
+    setGoalTitle(goal.title);
+    setGoalTarget(goal.targetAmount);
+    setIsGoalModalOpen(true);
+  };
 
   const handleSaveBudget = async (newBudget) => {
     setMonthlyBudget(newBudget);
@@ -107,6 +190,28 @@ function App() {
   const formatCurrency = (value) => {
     return `${currency.symbol}${Number(value).toLocaleString()}`;
   };
+
+  useEffect(() => {
+    if (!user?.uid) return;
+
+    const q = query(
+      collection(db, 'goals'),
+      where('userId', '==', user.uid),
+      orderBy('createdAt', 'desc')
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setGoals(data);
+    }, (error) => {
+      console.error("Goals Fetch Error:", error);
+    });
+
+    return () => unsubscribe();
+  }, [user?.uid]);
 
 
 
@@ -182,6 +287,8 @@ function App() {
     }
   };
 
+
+
   if (!user) return <Login />;
 
   return (
@@ -195,7 +302,7 @@ function App() {
         <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} onNavClick={() => setIsMobileMenuOpen(false)} />
       </div>
 
-      <main className="flex-1 h-full overflow-y-auto p-6 lg:p-12 custom-scrollbar">
+      <main className="flex-1 h-full overflow-y-auto p-4 sm:p-6 lg:p-12 custom-scrollbar">
         {activeTab === 'dashboard' ? (
           <>
             <header className="mb-10 pt-12 lg:pt-0 flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -216,16 +323,26 @@ function App() {
             </div>
 
             <div className="budget-card">
-              <div className="flex justify-between">
-                <span>Monthly Budget</span>
-                <span>{budgetPercent.toFixed(0)}% Used</span>
+              <div className="flex justify-between items-end mb-2">
+                <div>
+                  <span className="text-xs uppercase tracking-wider text-slate-500 font-bold">Monthly Budget</span>
+                  <h2 className="text-xl font-bold">{formatCurrency(monthlyBudget)}</h2>
+                </div>
+                <div className="text-right">
+                  <span className="text-xs uppercase tracking-wider text-slate-500 font-bold">Remaining</span>
+                  <h2 className={`text-xl font-bold ${balance < 0 ? 'text-rose-500' : 'text-emerald-500'}`}>
+                    {formatCurrency(monthlyBudget - totalExpense)}
+                  </h2>
+                </div>
               </div>
+
               <div className="budget-progress-container">
                 <div
                   className={`budget-progress-bar ${budgetPercent > 90 ? 'danger' : budgetPercent > 70 ? 'warning' : ''}`}
                   style={{ width: `${Math.min(budgetPercent, 100)}%` }}
                 ></div>
               </div>
+              <p className="text-xs text-slate-500 mt-2">{budgetPercent.toFixed(1)}% of limit reached</p>
             </div>
 
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
@@ -248,6 +365,20 @@ function App() {
                 {/* Updated with Currency logic */}
                 <BudgetProgress income={totalIncome} expenses={totalExpense} currencySymbol={currency.symbol} />
 
+
+                {/* ONLY show here if goals are few */}
+                {/* Show in sidebar ONLY if goals are 0 or 1 */}
+                {goals.length < 2 && (
+                  <div className="bg-white/5 p-6 rounded-[2.5rem] border border-white/10 backdrop-blur-xl">
+                    <Goals
+                      goals={goals}
+                      onAddClick={() => { setEditingGoal(null); setIsGoalModalOpen(true); }}
+                      onEditClick={handleEditGoal}
+                      onDeleteClick={confirmDelete}
+                      formatCurrency={formatCurrency}
+                    />
+                  </div>
+                )}
                 <div className="bg-white/5 p-6 rounded-[2.5rem] border border-white/10 backdrop-blur-xl">
                   <h3 className="text-sm font-bold mb-4 text-slate-400 uppercase tracking-widest">Top Spending</h3>
                   <div className="space-y-4">
@@ -264,15 +395,22 @@ function App() {
                     )) : <p className="text-xs text-slate-500">No expenses recorded yet.</p>}
                   </div>
                 </div>
+
               </div>
 
               <div className="xl:col-span-2 space-y-8 pb-10">
                 <div className="bg-white/5 border border-white/10 p-6 lg:p-8 rounded-[2.5rem] backdrop-blur-sm">
-                  <div className="flex justify-between items-center mb-8">
+                  <div className="flex flex-col gap-4 mb-8 sm:flex-row sm:justify-between sm:items-center">
                     <h3 className="text-xl font-bold">Wealth Trend</h3>
-                    <div className="flex bg-black/40 p-1 rounded-xl border border-white/5">
+                    <div className="flex bg-black/40 p-1 rounded-xl border border-white/5 self-start sm:self-auto">
                       {['all', 'income', 'expense'].map((f) => (
-                        <button key={f} onClick={() => setChartFilter(f)} className={`px-4 py-1.5 text-xs rounded-lg transition-all ${chartFilter === f ? 'bg-blue-600 text-white' : 'text-slate-500'}`}>{f}</button>
+                        <button
+                          key={f}
+                          onClick={() => setChartFilter(f)}
+                          className={`px-4 py-1.5 text-xs rounded-lg transition-all ${chartFilter === f ? 'bg-blue-600 text-white' : 'text-slate-500'}`}
+                        >
+                          {f}
+                        </button>
                       ))}
                     </div>
                   </div>
@@ -280,11 +418,31 @@ function App() {
                     {transactions.length > 0 ? <FinancialChart data={filteredChartData} color={getChartColor()} currencySymbol={currency.symbol} /> : <p>No data yet.</p>}
                   </div>
                 </div>
+
+                {/* GOALS SECTION */}
+                {/* Show in main area ONLY if goals are 2 or more */}
+                {goals.length >= 2 && (
+                  <div className="bg-white/5 p-8 rounded-[2.5rem] border border-white/10 backdrop-blur-xl mb-8">
+                    <Goals
+                      goals={goals}
+                      onAddClick={() => { setEditingGoal(null); setIsGoalModalOpen(true); }}
+                      onEditClick={handleEditGoal}
+                      onDeleteClick={confirmDelete}
+                      formatCurrency={formatCurrency}
+                    />
+                  </div>
+                )}
+
+
                 <TransactionList searchTerm={searchTerm} currencySymbol={currency.symbol} />
+
+
               </div>
             </div>
           </>
         ) : (
+
+
           <Settings
             currentCurrency={currency}
             setCurrency={setCurrency}
@@ -294,7 +452,84 @@ function App() {
             handleSaveBudget={handleSaveBudget}
           />
         )}
+
+        {isGoalModalOpen && (
+          <div className="modal-overlay">
+            <div className="modal-content">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-bold">New Saving Goal</h2>
+                <button onClick={() => setIsGoalModalOpen(false)} className="text-slate-400 hover:text-white">
+                  <X size={20} />
+                </button>
+              </div>
+
+              <form onSubmit={handleGoalSubmit}>
+                <div className="mb-4">
+                  <label className="text-xs text-slate-500 uppercase font-bold mb-2 block">Goal Name</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. MacBook Pro"
+                    value={goalTitle}
+                    onChange={(e) => setGoalTitle(e.target.value)}
+                    className="w-full bg-black/40 border border-white/10 p-3.5 rounded-xl outline-none focus:border-blue-500/50 transition-all"
+                    required
+                  />
+                </div>
+
+                <div className="mb-6">
+                  <label className="text-xs text-slate-500 uppercase font-bold mb-2 block">Target Amount</label>
+                  <input
+                    type="number"
+                    placeholder="0.00"
+                    value={goalTarget}
+                    onChange={(e) => setGoalTarget(e.target.value)}
+                    className="w-full bg-black/40 border border-white/10 p-3.5 rounded-xl outline-none focus:border-blue-500/50 transition-all"
+                    required
+                  />
+                </div>
+
+                <button type="submit" className="w-full bg-blue-600 hover:bg-blue-500 py-4 rounded-xl font-bold transition-all shadow-lg shadow-blue-600/20">
+                  Create Goal
+                </button>
+              </form>
+            </div>
+          </div>
+        )}
       </main>
+      {goalToDelete && (
+        <div className="modal-overlay">
+          <div className="modal-content text-center max-w-[350px]">
+            <div className="w-16 h-16 bg-rose-500/10 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Trash2 size={32} />
+            </div>
+
+            <h2 className="text-xl font-bold mb-2">Delete Goal?</h2>
+            <p className="text-slate-400 text-sm mb-8">
+              Are you sure? This will permanently remove your progress for this goal.
+            </p>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setGoalToDelete(null)}
+                className="flex-1 py-3.5 bg-white/5 hover:bg-white/10 rounded-2xl font-semibold transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={executeDelete}
+                className="flex-1 py-3.5 bg-rose-600 hover:bg-rose-500 rounded-2xl font-bold transition-all shadow-lg shadow-rose-600/20"
+              >
+                Yes, Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {toast.show && (
+        <div className={`toast-notification ${toast.type}`}>
+          {toast.type === 'success' ? '✅' : '🗑️'} {toast.message}
+        </div>
+      )}
     </div>
   );
 }

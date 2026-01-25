@@ -53,32 +53,38 @@ export default function TransactionList({ searchTerm, currencySymbol }) {
                             });
 
                             return (
-                                <div key={t.id} className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5 hover:border-white/20 transition-all group relative">
-                                    <div className="flex items-center gap-4">
-                                        <div className={`p-3 rounded-xl ${t.type === 'income' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>
-                                            {t.type === 'income' ? <ArrowUpRight size={20} /> : <ArrowDownRight size={20} />}
-                                        </div>
-                                        <div>
-                                            <p className="font-semibold text-white">{t.title}</p>
-                                            <div className="flex items-center gap-2 text-xs text-slate-500">
-                                                <span className="bg-white/5 px-2 py-0.5 rounded-md">{t.category}</span>
-                                                <span>•</span>
-                                                <span className="flex items-center gap-1"><Calendar size={12} /> {date || 'Just now'}</span>
+                                <div key={t.id} className="p-4 bg-white/5 rounded-2xl border border-white/5 hover:border-white/20 transition-all group relative mb-3">
+                                    {/* Use a wrapper that switches to column on mobile via the CSS above */}
+                                    <div className="transaction-item flex flex-row items-center justify-between">
+
+                                        {/* GROUP 1: Icon and Labels */}
+                                        <div className="transaction-info-group flex items-center gap-4">
+                                            <div className={`p-3 rounded-xl ${t.type === 'income' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>
+                                                {t.type === 'income' ? <ArrowUpRight size={20} /> : <ArrowDownRight size={20} />}
+                                            </div>
+                                            <div>
+                                                <p className="transaction-title font-semibold text-white">{t.title}</p>
+                                                <div className="flex items-center gap-2 text-[10px] text-slate-500 uppercase tracking-tighter">
+                                                    <span className="bg-white/5 px-2 py-0.5 rounded-md">{t.category}</span>
+                                                    <span>{date || 'Just now'}</span>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
 
-                                    <div className="flex items-center gap-4">
-                                        <p className={`font-bold ${t.type === 'income' ? 'text-emerald-500' : 'text-rose-500'}`}>
-                                            {t.type === 'income' ? '+' : '-'}{currencySymbol}{Number(t.amount).toLocaleString()}
-                                        </p>
+                                        {/* GROUP 2: Money and Actions */}
+                                        <div className="transaction-meta-group flex items-center gap-4">
+                                            <p className={`font-bold text-sm sm:text-base ${t.type === 'income' ? 'text-emerald-500' : 'text-rose-500'}`}>
+                                                {t.type === 'income' ? '+' : '-'}{currencySymbol}{Number(t.amount).toLocaleString()}
+                                            </p>
 
-                                        <button
-                                            onClick={() => setDeletingItem(t)}
-                                            className="opacity-0 group-hover:opacity-100 p-2 hover:bg-rose-500/20 hover:text-rose-500 rounded-lg transition-all text-slate-500"
-                                        >
-                                            <Trash2 size={18} />
-                                        </button>
+                                            <button
+                                                onClick={() => setDeletingItem(t)}
+                                                className="p-2 bg-rose-500/10 text-rose-500 rounded-lg lg:bg-transparent lg:text-slate-500 lg:opacity-0 lg:group-hover:opacity-100 transition-all"
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
+                                        </div>
+
                                     </div>
                                 </div>
                             );
