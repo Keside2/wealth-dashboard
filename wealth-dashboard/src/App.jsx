@@ -50,6 +50,14 @@ function App() {
   const [editingGoal, setEditingGoal] = useState(null);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
   const [goalToDelete, setGoalToDelete] = useState(null);
+  const [depositingGoal, setDepositingGoal] = useState(null);
+  const [depositAmount, setDepositAmount] = useState('');
+  const [withdrawingGoal, setWithdrawingGoal] = useState(null);
+  const [withdrawAmount, setWithdrawAmount] = useState('');
+
+
+
+
 
   // Function to trigger the toast
   const showToast = (message, type = 'success') => {
@@ -130,6 +138,74 @@ function App() {
     setGoalTitle(goal.title);
     setGoalTarget(goal.targetAmount);
     setIsGoalModalOpen(true);
+  };
+
+  const handleDeposit = async (e) => {
+    e.preventDefault();
+    if (!depositingGoal || !depositAmount || depositAmount <= 0) return;
+
+    try {
+      const goalRef = doc(db, 'goals', depositingGoal.id);
+      const newAmount = Number(depositingGoal.currentSaved || 0) + Number(depositAmount);
+
+      await updateDoc(goalRef, {
+        currentSaved: newAmount
+      });
+
+      // Optional: Add a transaction record automatically so it shows in history
+      await addDoc(collection(db, 'transactions'), {
+        userId: user.uid,
+        title: `Saved for ${depositingGoal.title}`,
+        amount: Number(depositAmount),
+        type: 'expense', // We treat it as an expense from the main balance
+        category: 'Savings',
+        createdAt: new Date()
+      });
+
+      showToast(`Added ${currency.symbol}${depositAmount} to ${depositingGoal.title}! 💰`);
+      setDepositAmount('');
+      setDepositingGoal(null);
+    } catch (err) {
+      console.error("Deposit failed:", err);
+      showToast("Transaction failed", "error");
+    }
+  };
+
+  const handleWithdraw = async (e) => {
+    e.preventDefault();
+    const amount = Number(withdrawAmount);
+
+    // Safety check: Don't withdraw more than what is saved
+    if (!withdrawingGoal || amount <= 0) return;
+    if (amount > withdrawingGoal.currentSaved) {
+      showToast("Not enough funds in this goal!", "error");
+      return;
+    }
+
+    try {
+      const goalRef = doc(db, 'goals', withdrawingGoal.id);
+      const newAmount = Number(withdrawingGoal.currentSaved) - amount;
+
+      // 1. Update the Goal in Firestore
+      await updateDoc(goalRef, { currentSaved: newAmount });
+
+      // 2. Add an 'Income' transaction to restore the main balance
+      await addDoc(collection(db, 'transactions'), {
+        userId: user.uid,
+        title: `Withdrawal from ${withdrawingGoal.title}`,
+        amount: amount,
+        type: 'income', // This adds it back to your total balance
+        category: 'Savings',
+        createdAt: new Date()
+      });
+
+      showToast(`Withdrew ${currency.symbol}${amount} successfully! 💸`);
+      setWithdrawAmount('');
+      setWithdrawingGoal(null);
+    } catch (err) {
+      console.error("Withdrawal failed:", err);
+      showToast("Error processing withdrawal", "error");
+    }
   };
 
   const handleSaveBudget = async (newBudget) => {
@@ -350,16 +426,83 @@ function App() {
                 <div className="bg-white/5 p-6 rounded-[2.5rem] border border-white/10 backdrop-blur-xl relative overflow-hidden group">
                   <h2 className="text-lg font-bold mb-4">Quick Add</h2>
                   <form onSubmit={handleAdd}>
+                    {/* Type Toggle (Income/Expense) */}
                     <div className="flex gap-2 mb-4 p-1 bg-black/40 rounded-xl border border-white/5">
                       {['income', 'expense'].map((t) => (
-                        <button key={t} type="button" onClick={() => setType(t)} className={`flex-1 py-2 rounded-lg text-sm capitalize transition-all ${type === t ? 'bg-white text-black font-bold' : 'text-slate-500 hover:text-slate-300'}`}>
+                        <button
+                          key={t}
+                          type="button"
+                          onClick={() => setType(t)}
+                          className={`flex-1 py-2 rounded-lg text-sm capitalize transition-all ${type === t ? 'bg-white text-black font-bold' : 'text-slate-500 hover:text-slate-300'}`}
+                        >
                           {t}
                         </button>
                       ))}
                     </div>
-                    <input type="text" placeholder="Title" value={title} onChange={(e) => setTitle(e.target.value)} className="w-full bg-black/20 border border-white/10 p-3.5 rounded-xl mb-3 outline-none" />
-                    <input type="number" placeholder="Amount" value={amount} onChange={(e) => setAmount(e.target.value)} className="w-full bg-black/20 border border-white/10 p-3.5 rounded-xl mb-3 outline-none" />
-                    <button className="w-full bg-blue-600 py-4 rounded-xl font-bold transition-all">Add Transaction</button>
+
+                    <input type="text" placeholder="Title" value={title} onChange={(e) => setTitle(e.target.value)} className="w-full bg-black/20 border border-white/10 p-3.5 rounded-xl mb-3 outline-none focus:border-blue-500/50 transition-all" />
+
+                    <input type="number" placeholder="Amount" value={amount} onChange={(e) => setAmount(e.target.value)} className="w-full bg-black/20 border border-white/10 p-3.5 rounded-xl mb-3 outline-none focus:border-blue-500/50 transition-all" />
+
+                    {/* Category Selection Logic */}
+                    <div className="mb-4">
+                      {!isCustomCategory ? (
+                        <select
+                          value={category}
+                          onChange={(e) => {
+                            if (e.target.value === 'custom') {
+                              setIsCustomCategory(true);
+                            } else {
+                              setCategory(e.target.value);
+                            }
+                          }}
+                          className="w-full bg-black/80 border border-white/10 p-3.5 rounded-xl outline-none text-slate-300 appearance-none cursor-pointer focus:border-blue-500/50 transition-all okay"
+
+                        >
+                          <option value="General">Select Category</option>
+                          {type === 'income' ? (
+                            <>
+                              <option value="Salary">Salary</option>
+                              <option value="Freelance">Freelance</option>
+                              <option value="Investment">Investment</option>
+                            </>
+                          ) : (
+                            <>
+                              <option value="Food">Food</option>
+                              <option value="Transport">Transport</option>
+                              <option value="Shopping">Shopping</option>
+                              <option value="Bills">Bills</option>
+                            </>
+                          )}
+                          <option value="custom" className="text-blue-400">+ Add Custom</option>
+                        </select>
+                      ) : (
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            placeholder="New Category Name"
+                            value={customCategory}
+                            onChange={(e) => setCustomCategory(e.target.value)}
+                            className="flex-1 bg-black/20 border border-blue-500/30 p-3.5 rounded-xl outline-none"
+                            autoFocus
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsCustomCategory(false);
+                              setCustomCategory('');
+                            }}
+                            className="px-4 bg-white/5 hover:bg-white/10 rounded-xl text-xs transition-colors"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    <button className="w-full bg-blue-600 hover:bg-blue-500 py-4 rounded-xl font-bold transition-all shadow-lg shadow-blue-600/20">
+                      Add Transaction
+                    </button>
                   </form>
                 </div>
                 {/* Updated with Currency logic */}
@@ -375,6 +518,8 @@ function App() {
                       onAddClick={() => { setEditingGoal(null); setIsGoalModalOpen(true); }}
                       onEditClick={handleEditGoal}
                       onDeleteClick={confirmDelete}
+                      onDepositClick={(goal) => setDepositingGoal(goal)}
+                      onWithdrawClick={(goal) => setWithdrawingGoal(goal)}
                       formatCurrency={formatCurrency}
                     />
                   </div>
@@ -428,6 +573,8 @@ function App() {
                       onAddClick={() => { setEditingGoal(null); setIsGoalModalOpen(true); }}
                       onEditClick={handleEditGoal}
                       onDeleteClick={confirmDelete}
+                      onDepositClick={(goal) => setDepositingGoal(goal)}
+                      onWithdrawClick={(goal) => setWithdrawingGoal(goal)}
                       formatCurrency={formatCurrency}
                     />
                   </div>
@@ -528,6 +675,79 @@ function App() {
       {toast.show && (
         <div className={`toast-notification ${toast.type}`}>
           {toast.type === 'success' ? '✅' : '🗑️'} {toast.message}
+        </div>
+      )}
+
+      {depositingGoal && (
+        <div className="modal-overlay">
+          <div className="modal-content max-w-[400px]">
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h2 className="text-xl font-bold">Add Savings</h2>
+                <p className="text-xs text-slate-500">Target: {depositingGoal.title}</p>
+              </div>
+              <button onClick={() => setDepositingGoal(null)}><X size={20} /></button>
+            </div>
+
+            <form onSubmit={handleDeposit}>
+              <div className="mb-6">
+                <label className="text-xs text-slate-500 uppercase font-bold mb-2 block">Amount to Save</label>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">{currency.symbol}</span>
+                  <input
+                    type="number"
+                    autoFocus
+                    value={depositAmount}
+                    onChange={(e) => setDepositAmount(e.target.value)}
+                    className="w-full bg-black/40 border border-white/10 p-4 pl-10 rounded-2xl outline-none focus:border-emerald-500/50 transition-all text-xl font-bold"
+                    placeholder="0.00"
+                    required
+                  />
+                </div>
+              </div>
+
+              <button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-500 py-4 rounded-2xl font-bold transition-all shadow-lg shadow-emerald-600/20">
+                Confirm Deposit
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {withdrawingGoal && (
+        <div className="modal-overlay">
+          <div className="modal-content max-w-[400px]">
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h2 className="text-xl font-bold">Withdraw Funds</h2>
+                <p className="text-xs text-slate-500">Available: {currency.symbol}{withdrawingGoal.currentSaved}</p>
+              </div>
+              <button onClick={() => setWithdrawingGoal(null)}><X size={20} /></button>
+            </div>
+
+            <form onSubmit={handleWithdraw}>
+              <div className="mb-6">
+                <label className="text-xs text-slate-500 uppercase font-bold mb-2 block">Amount to Withdraw</label>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">{currency.symbol}</span>
+                  <input
+                    type="number"
+                    autoFocus
+                    max={withdrawingGoal.currentSaved} // Browser level safety
+                    value={withdrawAmount}
+                    onChange={(e) => setWithdrawAmount(e.target.value)}
+                    className="w-full bg-black/40 border border-white/10 p-4 pl-10 rounded-2xl outline-none focus:border-rose-500/50 transition-all text-xl font-bold"
+                    placeholder="0.00"
+                    required
+                  />
+                </div>
+              </div>
+
+              <button type="submit" className="w-full bg-rose-600 hover:bg-rose-500 py-4 rounded-2xl font-bold transition-all shadow-lg shadow-rose-600/20">
+                Confirm Withdrawal
+              </button>
+            </form>
+          </div>
         </div>
       )}
     </div>
