@@ -1,7 +1,7 @@
 import { useAuth } from './context/AuthContext';
 import Sidebar from './components/layout/Sidebar';
 import StatCard from './components/ui/StatCard';
-import { CreditCard, Wallet, TrendingUp, Menu, X, Plus, RotateCcw, Search, Trash2 } from 'lucide-react';
+import { CreditCard, Wallet, TrendingUp, Menu, X, Plus, RotateCcw, Search, Trash2, Target } from 'lucide-react';
 import { useState, useEffect, useMemo } from 'react';
 import { addTransaction } from './lib/transactions';
 import TransactionList from './components/dashboard/TransactionList';
@@ -54,6 +54,18 @@ function App() {
   const [depositAmount, setDepositAmount] = useState('');
   const [withdrawingGoal, setWithdrawingGoal] = useState(null);
   const [withdrawAmount, setWithdrawAmount] = useState('');
+  const totalSavedAcrossGoals = goals.reduce((acc, goal) => acc + (Number(goal.currentSaved) || 0), 0);
+  const totalGoalsTarget = goals.reduce((acc, goal) => acc + (Number(goal.targetAmount) || 0), 0);
+  const overallProgress = totalGoalsTarget > 0 ? (totalSavedAcrossGoals / totalGoalsTarget) * 100 : 0;
+  const [viewingGoal, setViewingGoal] = useState(null);
+
+  // Filter transactions for the selected goal
+  const goalTransactions = transactions.filter(t => t.goalId === viewingGoal?.id);
+  const dashboardGoals = goals.slice(0, 4);
+
+  const [showAllTransactions, setShowAllTransactions] = useState(false);
+  const [showAllGoals, setShowAllGoals] = useState(false);
+
 
 
 
@@ -155,6 +167,7 @@ function App() {
       // Optional: Add a transaction record automatically so it shows in history
       await addDoc(collection(db, 'transactions'), {
         userId: user.uid,
+        goalId: depositingGoal.id,
         title: `Saved for ${depositingGoal.title}`,
         amount: Number(depositAmount),
         type: 'expense', // We treat it as an expense from the main balance
@@ -192,6 +205,7 @@ function App() {
       // 2. Add an 'Income' transaction to restore the main balance
       await addDoc(collection(db, 'transactions'), {
         userId: user.uid,
+        goalId: withdrawingGoal.id,
         title: `Withdrawal from ${withdrawingGoal.title}`,
         amount: amount,
         type: 'income', // This adds it back to your total balance
@@ -508,6 +522,36 @@ function App() {
                 {/* Updated with Currency logic */}
                 <BudgetProgress income={totalIncome} expenses={totalExpense} currencySymbol={currency.symbol} />
 
+                <div className="bg-white/5 border border-white/10 p-6 rounded-[2.5rem] backdrop-blur-xl relative overflow-hidden group">
+                  {/* Decorative Background Glow */}
+                  <div className="absolute -right-4 -top-4 w-24 h-24 bg-blue-500/10 blur-3xl rounded-full group-hover:bg-blue-500/20 transition-all"></div>
+
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="p-3 bg-blue-500/10 text-blue-500 rounded-2xl">
+                      <Target size={24} />
+                    </div>
+                    <div className="text-right">
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Overall Progress</span>
+                      <p className="text-lg font-bold text-white">{overallProgress.toFixed(1)}%</p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <p className="text-slate-400 text-sm">Total Amount Saved</p>
+                    <h3 className="text-3xl font-black mt-1">
+                      {currency.symbol}{totalSavedAcrossGoals.toLocaleString()}
+                    </h3>
+                  </div>
+
+                  {/* Mini Progress Bar */}
+                  <div className="mt-4 h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-blue-500 rounded-full transition-all duration-1000"
+                      style={{ width: `${Math.min(overallProgress, 100)}%` }}
+                    ></div>
+                  </div>
+                </div>
+
 
                 {/* ONLY show here if goals are few */}
                 {/* Show in sidebar ONLY if goals are 0 or 1 */}
@@ -521,6 +565,7 @@ function App() {
                       onDepositClick={(goal) => setDepositingGoal(goal)}
                       onWithdrawClick={(goal) => setWithdrawingGoal(goal)}
                       formatCurrency={formatCurrency}
+                      onDetailClick={(goal) => setViewingGoal(goal)}
                     />
                   </div>
                 )}
@@ -576,12 +621,18 @@ function App() {
                       onDepositClick={(goal) => setDepositingGoal(goal)}
                       onWithdrawClick={(goal) => setWithdrawingGoal(goal)}
                       formatCurrency={formatCurrency}
+                      onDetailClick={(goal) => setViewingGoal(goal)}
                     />
                   </div>
                 )}
 
 
-                <TransactionList searchTerm={searchTerm} currencySymbol={currency.symbol} />
+                <TransactionList
+                  searchTerm={searchTerm}
+                  currencySymbol={currency.symbol}
+                  limit={5}
+                  onSeeAllClick={() => setShowAllTransactions(true)}
+                />
 
 
               </div>
@@ -747,6 +798,101 @@ function App() {
                 Confirm Withdrawal
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {viewingGoal && (
+        <div className="modal-overlay">
+          <div className="modal-content max-w-[500px]">
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h2 className="text-xl font-bold">{viewingGoal.title} History</h2>
+                <p className="text-xs text-slate-500">All transactions for this goal</p>
+              </div>
+              <button onClick={() => setViewingGoal(null)} className="text-slate-400 hover:text-white">
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+              {/* Filter transactions that match this goal's ID */}
+              {transactions.filter(t => t.goalId === viewingGoal.id).length > 0 ? (
+                transactions
+                  .filter(t => t.goalId === viewingGoal.id)
+                  .sort((a, b) => b.createdAt?.toDate() - a.createdAt?.toDate()) // Sort by newest
+                  .map((t) => (
+                    <div key={t.id} className="flex justify-between items-center p-4 bg-white/5 rounded-2xl border border-white/5">
+                      <div>
+                        <p className="font-bold text-sm">{t.title}</p>
+                        <p className="text-[10px] text-slate-500 uppercase tracking-wider">
+                          {t.createdAt?.toDate().toLocaleDateString()}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className={`font-black ${t.type === 'income' ? 'text-emerald-400' : 'text-rose-400'}`}>
+                          {t.type === 'income' ? '+' : '-'}{currency.symbol}{t.amount.toLocaleString()}
+                        </p>
+                        <p className="text-[10px] text-slate-600 uppercase font-bold">{t.type}</p>
+                      </div>
+                    </div>
+                  ))
+              ) : (
+                <div className="text-center py-10">
+                  <p className="text-slate-500 italic text-sm">No transactions recorded for this goal yet.</p>
+                </div>
+              )}
+            </div>
+
+            <button
+              onClick={() => setViewingGoal(null)}
+              className="w-full mt-6 bg-white/5 hover:bg-white/10 py-4 rounded-2xl font-bold transition-all"
+            >
+              Close History
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showAllTransactions && (
+        <div className="modal-overlay" onClick={() => setShowAllTransactions(false)}>
+          {/* stopPropagation prevents the modal from closing when clicking inside the box */}
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+
+            {/* Sticky Header */}
+            <div className="p-6 md:p-8 border-b border-white/5 flex justify-between items-center bg-white/[0.02]">
+              <div>
+                <h2 className="text-2xl md:text-3xl font-black text-white">History</h2>
+                <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em] mt-1">
+                  Transaction Log
+                </p>
+              </div>
+              <button
+                onClick={() => setShowAllTransactions(false)}
+                className="w-12 h-12 flex items-center justify-center bg-white/5 rounded-full hover:bg-white/10 transition-all"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            {/* Scrollable List Area */}
+            <div className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar">
+              <TransactionList
+                searchTerm={searchTerm}
+                currencySymbol={currency.symbol}
+                isModal={true}
+              />
+            </div>
+
+            {/* Footer Action */}
+            <div className="p-6 md:p-8 border-t border-white/5 bg-white/[0.02]">
+              <button
+                onClick={() => setShowAllTransactions(false)}
+                className="w-full py-4 bg-white text-black font-extrabold rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl"
+              >
+                Close History
+              </button>
+            </div>
           </div>
         </div>
       )}
