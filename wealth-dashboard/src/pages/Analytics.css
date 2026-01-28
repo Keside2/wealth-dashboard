@@ -1,0 +1,96 @@
+.analytics-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 2.5rem;
+    padding: 2rem;
+    backdrop-filter: blur(20px);
+    display: flex;
+    flex-direction: column;
+}
+
+.chart-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #ffffff;
+    margin-bottom: 1.5rem;
+}
+
+.pie-container {
+    height: 300px;
+    width: 100%;
+}
+
+.legend-list {
+    margin-top: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    overflow-y: auto;
+    max-height: 100px;
+}
+
+.legend-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.75rem;
+}
+
+.legend-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.color-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+}
+
+.category-name {
+    color: #64748b;
+}
+
+.category-value {
+    color: #ffffff;
+    font-weight: 700;
+}
+
+.analytics-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2rem;
+}
+
+/* For screens larger than LG (desktop) */
+@media (min-width: 1024px) {
+    .analytics-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+    
+    .main-chart-span {
+        grid-column: span 2;
+    }
+}
+
+.chart-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 2.5rem;
+    padding: 2rem;
+    backdrop-filter: blur(20px);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+.chart-wrapper {
+    height: 350px;
+    width: 100%;
+}
+
+.bold-white-text {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #ffffff;
+    margin-bottom: 2rem;
+}

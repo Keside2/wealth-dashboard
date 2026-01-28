@@ -13,6 +13,7 @@ import BudgetProgress from './components/dashboard/BudgetProgress';
 import Settings from './pages/Settings';
 import { doc, updateDoc } from 'firebase/firestore';
 import Goals from './components/dashboard/Goals';
+import Analytics from './pages/Analytics';
 
 
 
@@ -61,11 +62,14 @@ function App() {
 
   // Filter transactions for the selected goal
   const goalTransactions = transactions.filter(t => t.goalId === viewingGoal?.id);
-  const dashboardGoals = goals.slice(0, 4);
+  const dashboardGoals = goals.slice(0, 3);
 
   const [showAllTransactions, setShowAllTransactions] = useState(false);
   const [showAllGoals, setShowAllGoals] = useState(false);
+  // Calculate total saved across all goals
+  const totalSaved = goals.reduce((acc, goal) => acc + (Number(goal.currentSaved) || 0), 0);
 
+  const getTodayStr = () => new Date().toISOString().split('T')[0];
 
 
 
@@ -352,12 +356,16 @@ function App() {
   const handleAdd = async (e) => {
     e.preventDefault();
     if (!title || !amount || amount <= 0) return;
+
+    // 1. Sanitize: Ensure type is lowercase and date is stored correctly
     const finalCategory = isCustomCategory ? customCategory : category;
+    const sanitizedType = type.toLowerCase(); // ensures 'income' or 'expense'
+    const transactionDate = getTodayStr(); // Result: "2026-01-28"
 
     setPulses({
       balance: true,
-      income: type === 'income',
-      expense: type === 'expense'
+      income: sanitizedType === 'income',
+      expense: sanitizedType === 'expense'
     });
 
     setTimeout(() => {
@@ -366,12 +374,19 @@ function App() {
 
     try {
       await addTransaction(user.uid, {
-        title,
+        title: title.trim(),
         amount: Number(amount),
-        type,
-        category: finalCategory
+        type: sanitizedType,
+        category: finalCategory,
+        date: transactionDate, // 👈 CRITICAL: Added this for Analytics!
+        createdAt: new Date().toISOString()
       });
-      setTitle(''); setAmount(''); setCustomCategory(''); setIsCustomCategory(false);
+
+      // Reset form
+      setTitle('');
+      setAmount('');
+      setCustomCategory('');
+      setIsCustomCategory(false);
     } catch (err) {
       console.error("Failed to add transaction:", err);
     }
@@ -558,14 +573,16 @@ function App() {
                 {goals.length < 2 && (
                   <div className="bg-white/5 p-6 rounded-[2.5rem] border border-white/10 backdrop-blur-xl">
                     <Goals
-                      goals={goals}
+                      goals={dashboardGoals}
                       onAddClick={() => { setEditingGoal(null); setIsGoalModalOpen(true); }}
+                      onSeeAllClick={() => setShowAllGoals(true)}
                       onEditClick={handleEditGoal}
                       onDeleteClick={confirmDelete}
                       onDepositClick={(goal) => setDepositingGoal(goal)}
                       onWithdrawClick={(goal) => setWithdrawingGoal(goal)}
-                      formatCurrency={formatCurrency}
+                      formatCurrency={(amount) => `${currency.symbol}${Number(amount).toLocaleString()}`}
                       onDetailClick={(goal) => setViewingGoal(goal)}
+                      currency={currency}
                     />
                   </div>
                 )}
@@ -614,13 +631,15 @@ function App() {
                 {goals.length >= 2 && (
                   <div className="bg-white/5 p-8 rounded-[2.5rem] border border-white/10 backdrop-blur-xl mb-8">
                     <Goals
-                      goals={goals}
+                      goals={dashboardGoals}
+                      currency={currency}
                       onAddClick={() => { setEditingGoal(null); setIsGoalModalOpen(true); }}
+                      onSeeAllClick={() => setShowAllGoals(true)}
                       onEditClick={handleEditGoal}
                       onDeleteClick={confirmDelete}
                       onDepositClick={(goal) => setDepositingGoal(goal)}
                       onWithdrawClick={(goal) => setWithdrawingGoal(goal)}
-                      formatCurrency={formatCurrency}
+                      formatCurrency={(amount) => `${currency.symbol}${Number(amount).toLocaleString()}`}
                       onDetailClick={(goal) => setViewingGoal(goal)}
                     />
                   </div>
@@ -638,9 +657,12 @@ function App() {
               </div>
             </div>
           </>
+        ) : activeTab === 'analytics' ? (
+          <Analytics
+            transactions={transactions}
+            currencySymbol={currency.symbol}
+          />
         ) : (
-
-
           <Settings
             currentCurrency={currency}
             setCurrency={setCurrency}
@@ -891,6 +913,52 @@ function App() {
                 className="w-full py-4 bg-white text-black font-extrabold rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl"
               >
                 Close History
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showAllGoals && (
+        <div className="modal-overlay backdrop-blur-md" onClick={() => setShowAllGoals(false)}>
+          <div className="modal-content max-w-[900px]" onClick={(e) => e.stopPropagation()}>
+
+            {/* Header */}
+            <div className="p-6 md:p-8 border-b border-white/5 flex justify-between items-center bg-white/[0.02]">
+              <div>
+                <h2 className="text-2xl md:text-3xl font-black text-white">Your Goals</h2>
+                <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em] mt-1">
+                  Total Saved: {currency.symbol}{totalSaved.toLocaleString()}
+                </p>
+              </div>
+              <button onClick={() => setShowAllGoals(false)} className="w-12 h-12 flex items-center justify-center bg-white/5 rounded-full text-slate-400">
+                <X size={24} />
+              </button>
+            </div>
+
+            {/* Scrollable Grid */}
+            <div className="flex-1 overflow-y-auto p-6 md:p-8 custom-scrollbar">
+              {/* We reuse the Goals component but pass ALL goals here */}
+              <Goals
+                goals={goals}
+                currency={currency}
+                isModal={true} // We can use this to hide the "Add Goal" button inside the modal
+                formatCurrency={formatCurrency}
+                /* THE MISSING PIECES: */
+                onDepositClick={(goal) => { setDepositingGoal(goal); setShowAllGoals(false); }}
+                onWithdrawClick={(goal) => { setWithdrawingGoal(goal); setShowAllGoals(false); }}
+                onEditClick={(goal) => { handleEditGoal(goal); setShowAllGoals(false); }}
+                onDeleteClick={(id) => { confirmDelete(id); setShowAllGoals(false); }}
+                onDetailClick={(goal) => { setViewingGoal(goal); setShowAllGoals(false); }}
+              />
+            </div>
+
+            <div className="p-6 border-t border-white/5">
+              <button
+                onClick={() => setShowAllGoals(false)}
+                className="w-full py-4 bg-white text-black font-extrabold rounded-2xl"
+              >
+                Close
               </button>
             </div>
           </div>
