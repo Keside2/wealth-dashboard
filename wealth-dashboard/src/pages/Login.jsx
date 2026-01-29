@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { auth } from '../lib/firebase';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { TrendingUp, Mail, Lock, ArrowRight,User } from 'lucide-react';
+import { TrendingUp, Mail, Lock, ArrowRight, User } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export default function Login() {
@@ -11,24 +11,24 @@ export default function Login() {
   const [username, setUsername] = useState('');
   const [error, setError] = useState('');
 
-const { updateUserProfile } = useAuth();
+  const { updateUserProfile } = useAuth();
 
- const handleSubmit = async (e) => {
-  e.preventDefault();
-  setError('');
-  try {
-    if (isLogin) {
-      await signInWithEmailAndPassword(auth, email, password);
-    } else {
-      // Create user
-      await createUserWithEmailAndPassword(auth, email, password);
-      // Update the name using our new context function
-      await updateUserProfile(username);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    try {
+      if (isLogin) {
+        await signInWithEmailAndPassword(auth, email, password);
+      } else {
+        // Create user
+        await createUserWithEmailAndPassword(auth, email, password);
+        // Update the name using our new context function
+        await updateUserProfile(username);
+      }
+    } catch (err) {
+      setError(err.message.replace('Firebase:', ''));
     }
-  } catch (err) {
-    setError(err.message.replace('Firebase:', ''));
-  }
-};
+  };
 
   return (
     <div className="min-h-screen bg-[#050505] flex items-center justify-center p-6">
@@ -62,8 +62,8 @@ const { updateUserProfile } = useAuth();
                 <label className="text-sm font-medium text-slate-300 ml-1">Full Name</label>
                 <div className="relative">
                   <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     className="w-full bg-white/5 border border-white/10 rounded-2xl py-3.5 pl-12 pr-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
@@ -78,8 +78,8 @@ const { updateUserProfile } = useAuth();
               <label className="text-sm font-medium text-slate-300 ml-1">Email Address</label>
               <div className="relative">
                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
-                <input 
-                  type="email" 
+                <input
+                  type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full bg-white/5 border border-white/10 rounded-2xl py-3.5 pl-12 pr-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
@@ -93,8 +93,8 @@ const { updateUserProfile } = useAuth();
               <label className="text-sm font-medium text-slate-300 ml-1">Password</label>
               <div className="relative">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
-                <input 
-                  type="password" 
+                <input
+                  type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full bg-white/5 border border-white/10 rounded-2xl py-3.5 pl-12 pr-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
@@ -111,7 +111,7 @@ const { updateUserProfile } = useAuth();
           </form>
 
           <div className="mt-8 text-center">
-            <button 
+            <button
               onClick={() => setIsLogin(!isLogin)}
               className="text-slate-400 hover:text-white text-sm transition-colors"
             >

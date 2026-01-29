@@ -554,3 +554,13 @@ body {
   padding: 1.5rem;
   transition: all 0.3s ease;
 }
+
+.export-btn{
+  margin-left: -450px;
+}
+
+@media (max-width: 640px) {
+  .export-btn{
+  margin-left: 0px;
+}
+}

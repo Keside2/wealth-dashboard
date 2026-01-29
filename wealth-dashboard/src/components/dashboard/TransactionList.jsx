@@ -31,6 +31,8 @@ export default function TransactionList({ searchTerm, currencySymbol, onSeeAllCl
 
     const displayedTransactions = limit ? filteredTransactions.slice(0, limit) : filteredTransactions;
 
+
+
     return (
         <>
             {/* Conditional Container: Removes styling if inside a modal */}

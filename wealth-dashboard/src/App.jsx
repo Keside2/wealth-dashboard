@@ -307,6 +307,26 @@ function App() {
     return () => unsubscribe();
   }, [user?.uid]);
 
+  const exportToCSV = () => {
+    // 1. Define Headers
+    const headers = ["Date,Category,Type,Amount\n"];
+
+    // 2. Format Data
+    const rows = transactions.map(tx => {
+      const date = tx.date || new Date(tx.createdAt?.seconds * 1000).toLocaleDateString();
+      return `${date},${tx.category},${tx.type},${tx.amount}`;
+    });
+
+    // 3. Create the File
+    const blob = new Blob([headers + rows.join("\n")], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+
+    // 4. Trigger Download
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `transactions_${new Date().toLocaleDateString()}.csv`;
+    link.click();
+  };
 
 
   // 5. DYNAMIC CATEGORY ENGINE
@@ -419,6 +439,9 @@ function App() {
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
                 <input type="text" placeholder="Search history..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="bg-white/5 border border-white/10 py-3.5 pl-12 pr-6 rounded-2xl outline-none focus:border-blue-500/40 w-full md:w-72 transition-all" />
               </div>
+              <button onClick={exportToCSV} className="export-btn">
+                Export CSV
+              </button>
             </header>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
