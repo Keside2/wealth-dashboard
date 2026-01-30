@@ -450,6 +450,7 @@ function App() {
               <StatCard title="Total Expenses" amount={formatCurrency(totalExpense)} icon={CreditCard} color="text-rose-500" className={pulses.expense ? 'expense-pulse' : ''} />
             </div>
 
+
             <div className="budget-card">
               <div className="flex justify-between items-end mb-2">
                 <div>
@@ -644,8 +645,22 @@ function App() {
                       ))}
                     </div>
                   </div>
-                  <div className="min-h-[300px]">
-                    {transactions.length > 0 ? <FinancialChart data={filteredChartData} color={getChartColor()} currencySymbol={currency.symbol} /> : <p>No data yet.</p>}
+
+                  <div className="min-h-[300px] flex items-center justify-center">
+                    {transactions.length > 0 ? (
+                      <FinancialChart data={filteredChartData} color={getChartColor()} currencySymbol={currency.symbol} />
+                    ) : (
+                      /* GROWING CHART PLACEHOLDER */
+                      <div className="flex flex-col items-center justify-center text-center">
+                        <div className="relative mb-6 growing-icon">
+                          <TrendingUp size={56} className="text-blue-500/50" />
+                          {/* The Glow behind the icon */}
+                          <div className="absolute inset-0 bg-blue-600/10 blur-2xl rounded-full"></div>
+                        </div>
+                        <p className="text-sm font-semibold text-slate-400">Waiting for data to grow...</p>
+                        <p className="text-[10px] uppercase tracking-[0.2em] text-slate-600 mt-2">Your wealth trend starts with one entry</p>
+                      </div>
+                    )}
                   </div>
                 </div>
 

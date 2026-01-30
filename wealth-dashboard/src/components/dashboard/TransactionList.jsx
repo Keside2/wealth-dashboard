@@ -41,9 +41,7 @@ export default function TransactionList({ searchTerm, currencySymbol, onSeeAllCl
                 {/* Header: Hidden if isModal is true (the modal will have its own header) */}
                 {!isModal && (
                     <div className="flex justify-between items-center mb-6">
-                        <h3 className="text-xl font-bold text-white">
-                            Recent Transactions
-                        </h3>
+                        <h3 className="text-xl font-bold text-white">Recent Transactions</h3>
                         {limit && transactions.length > limit && (
                             <button
                                 onClick={onSeeAllClick}
@@ -66,7 +64,7 @@ export default function TransactionList({ searchTerm, currencySymbol, onSeeAllCl
                             return (
                                 <div
                                     key={t.id}
-                                    className={`p-4 bg-white/5 rounded-2xl border border-white/5 hover:bg-white/[0.08] transition-all group relative ${isModal ? 'mb-2' : ''}`}
+                                    className={`p-4 bg-white/5 rounded-2xl border border-white/5 hover:bg-white/[0.08] transition-all group animate-fade-in ${isModal ? 'mb-2' : ''}`}
                                 >
                                     <div className="flex flex-row items-center justify-between ">
                                         <div className="flex items-center gap-4">
@@ -99,9 +97,21 @@ export default function TransactionList({ searchTerm, currencySymbol, onSeeAllCl
                             );
                         })
                     ) : (
-                        <div className="text-center py-12">
-                            <TrendingUp size={40} className="text-slate-700 mx-auto mb-4 opacity-20" />
-                            <p className="text-slate-500 text-sm italic">No transactions found.</p>
+                        /* UPDATED EMPTY STATE WITH GROWING ICON */
+                        <div className="text-center py-16 animate-fade-in">
+                            <div className="relative inline-block mb-6 growing-icon">
+                                {/* Main Blue Icon */}
+                                <TrendingUp size={52} className="text-blue-500 relative z-10" />
+
+                                {/* Layered Glow Effects */}
+                                <div className="absolute inset-0 bg-blue-600/20 blur-xl rounded-full scale-150"></div>
+                                <div className="absolute inset-0 bg-blue-400/10 blur-3xl rounded-full scale-[2]"></div>
+                            </div>
+
+                            <p className="text-slate-300 text-sm font-semibold italic">No transactions found.</p>
+                            <p className="text-[10px] text-blue-500/60 uppercase tracking-[0.2em] font-bold mt-2">
+                                Start your record today
+                            </p>
                         </div>
                     )}
                 </div>
