@@ -557,7 +557,12 @@ body {
 
 .export-btn{
   margin-left: -450px;
+  cursor: pointer;
 }
+.export-btn:hover{
+  color: #155DFC;
+}
+
 
 @media (max-width: 640px) {
   .export-btn{

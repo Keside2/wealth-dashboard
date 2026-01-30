@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { User, Palette, Globe, LogOut, CheckCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import './Settings.css';
-import { updateProfile } from 'firebase/auth';
+import { updateProfile, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 
 export default function Settings({ currentCurrency, setCurrency, currentTheme, setTheme, handleSaveBudget, monthlyBudget }) {
@@ -11,6 +11,39 @@ export default function Settings({ currentCurrency, setCurrency, currentTheme, s
     const [showToast, setShowToast] = useState(false);
     const [isUpdating, setIsUpdating] = useState(false);
     const [toastMsg, setToastMsg] = useState('');
+
+    const [isChangingPassword, setIsChangingPassword] = useState(false);
+    const [passwords, setPasswords] = useState({ old: '', new: '', confirm: '' });
+
+
+    const handleChangePassword = async (e) => {
+        e.preventDefault();
+        if (passwords.new !== passwords.confirm) {
+            setToastMsg("New passwords do not match!");
+            triggerToast();
+            return;
+        }
+
+        setIsUpdating(true);
+        try {
+            const credential = EmailAuthProvider.credential(user.email, passwords.old);
+            // Firebase requires re-authentication for sensitive changes
+            await reauthenticateWithCredential(auth.currentUser, credential);
+            await updatePassword(auth.currentUser, passwords.new);
+
+            setToastMsg('Password updated successfully!');
+            triggerToast();
+            setIsChangingPassword(false);
+            setPasswords({ old: '', new: '', confirm: '' });
+        } catch (error) {
+            console.error(error);
+            setToastMsg(error.code === 'auth/wrong-password' ? 'Old password incorrect' : 'Error updating password');
+            triggerToast();
+        } finally {
+            setIsUpdating(false);
+        }
+    };
+
 
     // NEW: State to track which sub-tab is active
     const [activeSubTab, setActiveSubTab] = useState('profile');
@@ -34,6 +67,17 @@ export default function Settings({ currentCurrency, setCurrency, currentTheme, s
         setTheme(newTheme);
         setToastMsg(`Theme set to ${newTheme.charAt(0).toUpperCase() + newTheme.slice(1)}`);
         triggerToast();
+    };
+
+    const handleResetPassword = async () => {
+        try {
+            await sendPasswordResetEmail(auth, user.email);
+            setToastMsg('Password reset email sent!');
+            triggerToast();
+        } catch (error) {
+            setToastMsg('Error sending reset email.');
+            triggerToast();
+        }
     };
 
     const handleUpdateProfile = async (e) => {
@@ -98,27 +142,84 @@ export default function Settings({ currentCurrency, setCurrency, currentTheme, s
                         <section className="settings-card animate-fade-in">
                             <div className="card-header">
                                 <User size={20} className="text-blue-500" />
-                                <h3 className="card-title">User Profile</h3>
+                                <h3 className="card-title">{isChangingPassword ? 'Security' : 'User Profile'}</h3>
                             </div>
-                            <form onSubmit={handleUpdateProfile} className="profile-form">
-                                <div className="input-group">
-                                    <label className="input-label">Display Name</label>
-                                    <input
-                                        type="text"
-                                        className="settings-input"
-                                        value={name}
-                                        onChange={(e) => setName(e.target.value)}
-                                        placeholder="Enter your name"
-                                    />
-                                </div>
-                                <button
-                                    type="submit"
-                                    className="save-btn"
-                                    disabled={isUpdating || name === user?.displayName}
-                                >
-                                    {isUpdating ? 'Saving...' : 'Save Changes'}
-                                </button>
-                            </form>
+
+                            {!isChangingPassword ? (
+                                /* NORMAL PROFILE FORM */
+                                <form onSubmit={handleUpdateProfile} className="profile-form">
+                                    <div className="input-group">
+                                        <label className="input-label">Display Name</label>
+                                        <input
+                                            type="text"
+                                            className="settings-input"
+                                            value={name}
+                                            onChange={(e) => setName(e.target.value)}
+                                            placeholder="Enter your name"
+                                        />
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '10px' }}>
+                                        <button type="submit" className="save-btn" disabled={isUpdating}>
+                                            {isUpdating ? 'Saving...' : 'Save Changes'}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsChangingPassword(true)}
+                                            className="save-btn"
+                                            style={{ background: 'rgba(255,255,255,0.05)', color: '#94a3b8' }}
+                                        >
+                                            Change Password
+                                        </button>
+                                    </div>
+                                </form>
+                            ) : (
+                                /* NEW: CHANGE PASSWORD FORM */
+                                <form onSubmit={handleChangePassword} className="profile-form">
+                                    <div className="input-group">
+                                        <label className="input-label">Old Password</label>
+                                        <input
+                                            type="password"
+                                            className="settings-input"
+                                            value={passwords.old}
+                                            onChange={(e) => setPasswords({ ...passwords, old: e.target.value })}
+                                            required
+                                        />
+                                    </div>
+                                    <div className="input-group">
+                                        <label className="input-label">New Password</label>
+                                        <input
+                                            type="password"
+                                            className="settings-input"
+                                            value={passwords.new}
+                                            onChange={(e) => setPasswords({ ...passwords, new: e.target.value })}
+                                            required
+                                        />
+                                    </div>
+                                    <div className="input-group">
+                                        <label className="input-label">Confirm New Password</label>
+                                        <input
+                                            type="password"
+                                            className="settings-input"
+                                            value={passwords.confirm}
+                                            onChange={(e) => setPasswords({ ...passwords, confirm: e.target.value })}
+                                            required
+                                        />
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '10px' }}>
+                                        <button type="submit" className="save-btn" disabled={isUpdating}>
+                                            {isUpdating ? 'Updating...' : 'Update Password'}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsChangingPassword(false)}
+                                            className="save-btn"
+                                            style={{ background: 'transparent' }}
+                                        >
+                                            Cancel
+                                        </button>
+                                    </div>
+                                </form>
+                            )}
                         </section>
                     )}
 

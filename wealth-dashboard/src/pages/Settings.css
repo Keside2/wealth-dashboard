@@ -337,3 +337,9 @@
 
 .budget-progress-bar.warning { background: #f59e0b; } /* Orange */
 .budget-progress-bar.danger { background: #ef4444; }  /* Red */
+
+.reset-pw-btn:hover {
+    background: rgba(255, 255, 255, 0.05) !important;
+    color: white !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
+}

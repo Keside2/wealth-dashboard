@@ -7,7 +7,7 @@ export default function Sidebar({ activeTab, setActiveTab, onNavClick }) {
   // Define your menu items here for easy mapping
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: Home },
-    { id: 'wallet', label: 'Wallet', icon: Wallet },
+    // { id: 'wallet', label: 'Wallet', icon: Wallet },
     { id: 'analytics', label: 'Analytics', icon: PieChart },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];

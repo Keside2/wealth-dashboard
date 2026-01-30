@@ -64,6 +64,24 @@ export default function Analytics({ transactions, currencySymbol, totalIncome })
         return periodExpense / days;
     }, [periodExpense, timeframe]);
 
+    const insights = useMemo(() => {
+        const expenses = filteredTransactions.filter(tx => tx.type?.toLowerCase() === 'expense');
+        if (expenses.length === 0) return null;
+
+        const highestTx = expenses.reduce((prev, current) => (prev.amount > current.amount) ? prev : current);
+
+        // Find top category
+        const cats = {};
+        expenses.forEach(tx => cats[tx.category] = (cats[tx.category] || 0) + Number(tx.amount));
+        const topCat = Object.entries(cats).reduce((a, b) => a[1] > b[1] ? a : b);
+
+        return {
+            highestAmount: highestTx.amount,
+            highestCat: topCat[0],
+            totalCount: filteredTransactions.length
+        };
+    }, [filteredTransactions]);
+
     // --- CHART PREPARATION ---
     const chartData = useMemo(() => {
         const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -110,6 +128,21 @@ export default function Analytics({ transactions, currencySymbol, totalIncome })
                     <option value="all">All Time</option>
                 </select>
             </header>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                <div className="insight-mini-card">
+                    <span className="text-slate-500 text-[10px] uppercase">Top Category</span>
+                    <p className="text-white font-bold">{insights?.highestCat || 'N/A'}</p>
+                </div>
+                <div className="insight-mini-card">
+                    <span className="text-slate-500 text-[10px] uppercase">Largest Hit</span>
+                    <p className="text-rose-500 font-bold">{currencySymbol}{insights?.highestAmount || 0}</p>
+                </div>
+                <div className="insight-mini-card">
+                    <span className="text-slate-500 text-[10px] uppercase">Transactions</span>
+                    <p className="text-blue-400 font-bold">{insights?.totalCount || 0} items</p>
+                </div>
+            </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Cash Flow */}

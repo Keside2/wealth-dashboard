@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { auth } from '../lib/firebase';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, sendPasswordResetEmail } from 'firebase/auth';
 import { TrendingUp, Mail, Lock, ArrowRight, User } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -25,6 +25,19 @@ export default function Login() {
         // Update the name using our new context function
         await updateUserProfile(username);
       }
+    } catch (err) {
+      setError(err.message.replace('Firebase:', ''));
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!email) {
+      setError("Please enter your email address first.");
+      return;
+    }
+    try {
+      await sendPasswordResetEmail(auth, email);
+      setError("Reset link sent! Check your inbox."); // Using error state to show success for simplicity
     } catch (err) {
       setError(err.message.replace('Firebase:', ''));
     }
@@ -103,6 +116,17 @@ export default function Login() {
                 />
               </div>
             </div>
+            {isLogin && (
+              <div className="flex justify-end mt-1">
+                <button
+                  type="button"
+                  onClick={handleForgotPassword}
+                  className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                >
+                  Forgot Password?
+                </button>
+              </div>
+            )}
 
             <button className="w-full bg-white text-black font-bold py-4 rounded-2xl hover:bg-blue-50 transition-all flex items-center justify-center gap-2 group mt-6">
               {isLogin ? 'Sign In' : 'Create Account'}
